@@ -5,39 +5,9 @@
 
 #include <sys/stat.h>
 
-#include "logging.h"
+#include <common/logging.h>
+#include <common/image.h>
 #include "dds.h"
-
-// This DDS header is used for all our output heightmaps.
-const dds_header heightmap_dds_header = {
-		.identifier = DDS_BEGIN,
-		.size = 0x7C,
-		.flags = REQUIRED_BASE_FLAGS,
-		.height = 256, // HGHT files are always 256x256
-		.width = 256,
-		.pitch_or_linear_size = 0,
-		.depth = 0,
-		.mipmap_count = 1, // 1 mipmap means 1 image with 0 extra mipmaps
-		.reserved = {0},
-
-		.pixel_format = {
-				.size = sizeof(dds_pixel_format),
-				// Tell image reader this is a single-channel uncompressed texture.
-				.flags = DDPF_LUMINANCE,
-				.format_char_code = 0, // No special texture format needed.
-				// HGHT height values are 16-bit: https://zeldamods.org/wiki/HGHT
-				.bits_per_pixel = 16,
-				// Tell image reader to use the first 16 bits as our one channel
-				.red_bitmask = 0x0000FFFF,
-				.green_bitmask = 0,
-				.blue_bitmask = 0,
-				.alpha_bitmask = 0,
-		},
-		.caps = DDSCAPS_TEXTURE,
-		.caps2 = 0,
-		.caps3 = 0,
-		.caps4 = 0
-};
 
 typedef enum {
 	HGHT = 0,
@@ -81,7 +51,6 @@ void dds_to_hght(const char* dds_path, const char* hght_path) {
 	fclose(dds); // Close input file
 
 	// Write the heightmap data to our output.
-	// (which will be interpreted as pixels).
 	fwrite(&hght_data, hght_size, 1, hght);
 	fclose(hght);
 }
@@ -99,12 +68,10 @@ void hght_to_dds(const char* hght_path, const char* dds_path) {
 
 	// Try to open our HGHT input & DDS output files
 	FILE* hght = fopen(hght_path, "rb");
-	FILE* dds_out = fopen(dds_path, "wb");
 
 	// Bail if we can't open the files
-	if (hght == NULL || dds_out == NULL) {
+	if (hght == NULL) {
 		fclose(hght);
-		fclose(dds_out);
 		return;
 	}
 
@@ -114,9 +81,14 @@ void hght_to_dds(const char* hght_path, const char* dds_path) {
 
 	// Write the image header to our output, then the heightmap data
 	// (which will be interpreted as pixels).
-	fwrite(&heightmap_dds_header, sizeof(heightmap_dds_header), 1, dds_out);
-	fwrite(hght_data, hght_size, 1, dds_out);
-	fclose(dds_out);
+    texture tex = {
+        .channels = 1,
+        .unit_size = 2,
+        .height = 256,
+        .width = 256,
+        .data = (u8*)hght_data,
+    };
+    img_write(tex, dds_path);
 }
 
 int main(int argc, char** argv) {

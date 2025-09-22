@@ -1,13 +1,14 @@
 cmake_minimum_required(VERSION 3.16)
 project(hght
-	VERSION 0.0.1
+	VERSION 0.0.2
 	LANGUAGES C
 )
 
 set(CMAKE_C_STANDARD 99)
+add_subdirectory(lib/bobtail)
 
 add_executable(hght
 	"main.c"
-	"logging.c"
 )
 
+target_link_libraries(hght bobtail)
