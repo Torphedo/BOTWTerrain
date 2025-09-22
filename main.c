@@ -12,6 +12,30 @@
 #include <common/path.h>
 #include "dds.h"
 
+#define MAP_SIZE (6000.0f)
+
+u32 pos_to_zorder_idx(u8 detail_lvl, float x, float y) {
+    if (detail_lvl > 8) {
+        LOG_MSG(error, "The highest detail level is 8, but you asked for %d\n", detail_lvl);
+        return 0;
+    }
+
+    // How many HGHT files wide the map is
+    const u16 grid_res = 1 << detail_lvl;
+    // How wide each grid cell is in world coordinates
+    const float grid_size = MAP_SIZE / ((float)grid_res);
+
+    // Grid coordinates of this location
+    const u32 i = (u32)(x / grid_size);
+    const u32 j = (u32)(y / grid_size);
+
+    // Interleave bits to get Z-order curve index. Look at the Wikipedia page
+    // about it if you want to know why this works
+    const u32 idx = i & (j << 1);
+
+    return idx;
+}
+
 typedef enum {
 	HGHT,
 	DDS,
@@ -80,13 +104,18 @@ void hght_to_dds(const char* hght_path, const char* dds_path) {
     img_write(tex, dds_path);
 }
 
+void usage() {
+    LOG_MSG(info, "Usage: hght [path to HGHT/DDS file]\n");
+    LOG_MSG(info, "   OR: hght [detail level] [decimal X coordinate] [decimal Y coordinate]\n");
+}
+
 int main(int argc, char** argv) {
 	enable_win_ansi(); // Enable printing in color on Windows.
 	const char* input_path = argv[1];
 
 	if (argc == 1) {
 		LOG_MSG(error, "Not enough arguments.\n");
-		LOG_MSG(info, "Usage: hght [path to HGHT/DDS file]\n");
+        usage();
         return EXIT_FAILURE;
 	}
 
@@ -98,8 +127,20 @@ int main(int argc, char** argv) {
     else if (path_has_extension(input_path, ".hght")) {
         filetype = HGHT;
 		LOG_MSG(info, "Converting HGHT file to DDS.\n");
+    } else if (argc == 4) {
+        u8 detail_lvl = 0;
+        float x = 0.0f;
+        float y = 0.0f;
+        sscanf(argv[1], "%hhu", &detail_lvl);
+        sscanf(argv[2], "%f", &x);
+        sscanf(argv[3], "%f", &y);
+        const u32 idx = pos_to_zorder_idx(detail_lvl, x, y);
+
+        LOG_MSG(info, "Z-order curve index: %d\n", idx);
+        LOG_MSG(info, "Detail level: %d\n", detail_lvl);
+        LOG_MSG(info, "HGHT filename: 5%d%08X.hght\n", detail_lvl, idx);
+        return EXIT_SUCCESS;
     } else {
-		LOG_MSG(error, "Provided file is not HGHT or DDS.\n");
         return EXIT_FAILURE;
     }
 
