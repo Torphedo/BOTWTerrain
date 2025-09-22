@@ -14,6 +14,21 @@
 
 #define MAP_SIZE (6000.0f)
 
+u32 interleave16(u16 x, u16 y) {
+    u32 result = 0;
+
+    for (u32 i = 0; i < sizeof(x) * 8; i+= 2) {
+        result |= ((u32)(x & 1)) << i;
+        x >>= 1; // Cut off bottom bit
+    }
+    for (u32 i = 1; i < sizeof(y) * 8; i+= 2) {
+        result |= ((u32)(y & 1)) << i;
+        y >>= 1; // Cut off bottom bit
+    }
+    
+    return result;
+}
+
 u32 pos_to_zorder_idx(u8 detail_lvl, float x, float y) {
     if (detail_lvl > 8) {
         LOG_MSG(error, "The highest detail level is 8, but you asked for %d\n", detail_lvl);
@@ -25,15 +40,15 @@ u32 pos_to_zorder_idx(u8 detail_lvl, float x, float y) {
     // How wide each grid cell is in world coordinates
     const float grid_size = MAP_SIZE / ((float)grid_res);
 
+    LOG_MSG(debug, "HGHT size in world: %f\n", grid_size);
+
     // Grid coordinates of this location
     const u32 i = (u32)(x / grid_size);
     const u32 j = (u32)(y / grid_size);
 
     // Interleave bits to get Z-order curve index. Look at the Wikipedia page
     // about it if you want to know why this works
-    const u32 idx = i & (j << 1);
-
-    return idx;
+    return interleave16(i, j);
 }
 
 typedef enum {
@@ -136,8 +151,9 @@ int main(int argc, char** argv) {
         sscanf(argv[3], "%f", &y);
         const u32 idx = pos_to_zorder_idx(detail_lvl, x, y);
 
-        LOG_MSG(info, "Z-order curve index: %d\n", idx);
+        LOG_MSG(info, "X/Y coordinates: %f / %f\n", x, y);
         LOG_MSG(info, "Detail level: %d\n", detail_lvl);
+        LOG_MSG(info, "Z-order curve index: %d\n", idx);
         LOG_MSG(info, "HGHT filename: 5%d%08X.hght\n", detail_lvl, idx);
         return EXIT_SUCCESS;
     } else {
