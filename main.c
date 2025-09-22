@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
 			return EXIT_FAILURE;
 		}
 
-        const char* extension = (filetype == HGHT) ? "hght" : "dds";
+        const char* extension = (filetype == HGHT) ? "dds" : "hght";
         snprintf(out_path, out_path_size, "%s.%s", input_path, extension);
 	}
 
