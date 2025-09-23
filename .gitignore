@@ -2,3 +2,5 @@
 *.zip
 *.dds
 hght
+.idea
+out

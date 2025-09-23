@@ -4,6 +4,7 @@
 
 #include <common/logging.h>
 #include <common/file.h>
+#include <common/vfile.h>
 #include <common/image.h>
 
 #include "dds.h"
@@ -22,7 +23,7 @@ bool dds_to_hght(const char* dds_path, const char* hght_path) {
         LOG_MSG(error, "Failed to allocate %d bytes to load DDS file\n", dds_size);
         return false;
     }
-    texture tex = image_buf_load(dds_path, (u8*)&data, sizeof(dds_size));
+    texture tex = image_buf_load(dds_path, data, sizeof(dds_size));
 
 	FILE* hght = fopen(hght_path, "wb");
 	if (!hght) {
@@ -30,10 +31,33 @@ bool dds_to_hght(const char* dds_path, const char* hght_path) {
 		return false;
 	}
 
-	fwrite(data, sizeof(hght_t), 1, hght);
-	fclose(hght);
-    LOG_MSG(info, "Saved HGHT to '%s'\n", hght_path);
+    bool result = true;
+    if (tex.channels == 1 && tex.unit_size == 2) {
+        // Format matches HGHT file, just copy the data
+        fwrite(data, sizeof(hght_t), 1, hght);
+    }
+    else if (tex.compressed && tex.fmt == DDS_FORMAT_FLOAT) {
+        // Exported as 32-bit, convert to 16-bit and copy. We allow this
+        // because paint.net and GIMP can both import R16 but won't export it.
+        // R32 is the only lossless way to export.
+        vfile vf = vfile_open(tex.data, dds_size);
+        for (u32 i = 0; i < HGHT_WIDTH; i++) {
+            for (u32 j = 0; j < HGHT_WIDTH; j++) {
+                const float value = VFILE_READ(float, &vf) * (float)UINT16_MAX;
+                const u16 output = (u16)value;
+                fwrite(&output, sizeof(output), 1, hght);
+            }
+        }
+    } else {
+        LOG_MSG(error, "Can't convert DDS - must be R16 or floating-point R32\n");
+        result = false;
+    }
 
+    if (result) {
+        LOG_MSG(info, "Saved HGHT to '%s'\n", hght_path);
+    }
+    free(data);
+	fclose(hght);
     console_pause();
     return true;
 }

@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
     for (u32 i = 0; i < ARRAY_SIZE(input_extensions); i++) {
         if (path_has_extension(input_path, input_extensions[i])) {
             filetype = i;
+            break;
         }
     }
 
@@ -61,8 +62,6 @@ int main(int argc, char** argv) {
         }
         console_pause();
         return EXIT_SUCCESS;
-    } else {
-        return EXIT_FAILURE;
     }
 
 	// Get paths fom user input. If no dds output is given, use the HGHT path
