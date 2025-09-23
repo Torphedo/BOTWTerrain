@@ -7,54 +7,10 @@
 #include <common/logging.h>
 #include <common/platform.h>
 #include <common/file.h>
-#include <common/image.h>
 #include <common/path.h>
-#include "dds.h"
 
-#define MAP_SIZE (6000.0f)
-
-u32 interleave16(u16 x, u16 y) {
-    u32 result = 0;
-
-    for (u32 i = 0; i < sizeof(x) * 8; i+= 2) {
-        result |= ((u32)(x & 1)) << i;
-        x >>= 1; // Cut off bottom bit
-    }
-    for (u32 i = 1; i < sizeof(y) * 8; i+= 2) {
-        result |= ((u32)(y & 1)) << i;
-        y >>= 1; // Cut off bottom bit
-    }
-    
-    return result;
-}
-
-u32 pos_to_zorder_idx(u8 detail_lvl, float x, float y) {
-    if (detail_lvl > 8) {
-        LOG_MSG(error, "The highest detail level is 8, but you asked for %d\n", detail_lvl);
-        return 0;
-    }
-
-    // How many HGHT files wide the map is
-    const u16 grid_res = 1 << detail_lvl;
-    // How wide each grid cell is in world coordinates
-    const float grid_size = MAP_SIZE / ((float)grid_res);
-
-    LOG_MSG(debug, "HGHT size in world: %f\n", grid_size);
-
-    // Grid coordinates of this location
-    const u32 i = (u32)(x / grid_size);
-    const u32 j = (u32)(y / grid_size);
-
-    // Interleave bits to get Z-order curve index. Look at the Wikipedia page
-    // about it if you want to know why this works
-    return interleave16(i, j);
-}
-
-void console_pause() {
-#ifdef PLATFORM_WINDOWS
-    system("pause");
-#endif
-}
+#include "util.h"
+#include "terrain.h"
 
 typedef enum {
 	HGHT,
@@ -62,72 +18,9 @@ typedef enum {
 	INVALID,
 }input_type;
 
-void dds_to_hght(const char* dds_path, const char* hght_path) {
-	// Heightmaps are always 256x256 16-bit numbers
-	uint16_t hght_data[256*256] = {0};
-	const u32 hght_size = sizeof(hght_data);
-
-	// Sanity check that our file is the right size before we do anything
-	const u32 expected_size = sizeof(dds_header) + hght_size;
-	if (file_size(dds_path) != expected_size) {
-		LOG_MSG(error, "Invalid DDS file (wrong size)\n");
-		return;
-	}
-
-	FILE* hght = fopen(hght_path, "wb");
-	FILE* dds = fopen(dds_path, "rb");
-	if (!hght || !dds) {
-		fclose(hght);
-		fclose(dds);
-		return;
-	}
-
-	// Skip over the DDS header, then read heightmap into memory
-	fseek(dds, sizeof(dds_header), SEEK_SET);
-	fread(&hght_data, hght_size, 1, dds);
-	fclose(dds);
-
-	fwrite(&hght_data, hght_size, 1, hght);
-	fclose(hght);
-    LOG_MSG(info, "Saved HGHT to '%s'\n", hght_path);
-    console_pause();
-}
-
-void hght_to_dds(const char* hght_path, const char* dds_path) {
-	// Heightmaps are always 256x256 16-bit numbers
-	u16 hght_data[256*256] = {0};
-	const u32 hght_size = sizeof(hght_data);
-
-	// Sanity check that our file is the right size before we do anything
-	if (file_size(hght_path) != hght_size) {
-		LOG_MSG(error, "Invalid HGHT file (wrong size)\n");
-		return;
-	}
-
-	FILE* hght = fopen(hght_path, "rb");
-	if (!hght) {
-		fclose(hght);
-		return;
-	}
-
-	// Read heightmap into memory
-	fread(hght_data, hght_size, 1, hght);
-	fclose(hght);
-
-	// Write the image header to our output, then the heightmap data
-	// (which will be interpreted as pixels).
-    texture tex = {
-        .channels = 1,
-        .unit_size = 2,
-        .height = 256,
-        .width = 256,
-        .data = (u8*)hght_data,
-    };
-    img_write(tex, dds_path);
-
-    LOG_MSG(info, "Saved DDS to '%s'\n", dds_path);
-    console_pause();
-}
+const char* input_extensions[] = {
+    ".hght", ".dds", "",
+};
 
 void usage() {
     LOG_MSG(info, "Usage: hght [path to HGHT/DDS file]\n");
@@ -146,26 +39,26 @@ int main(int argc, char** argv) {
 	}
 
 	input_type filetype = INVALID;
-    if (path_has_extension(input_path, ".dds")) {
-        filetype = DDS;
-		LOG_MSG(info, "Converting DDS file to HGHT.\n");
+    for (u32 i = 0; i < ARRAY_SIZE(input_extensions); i++) {
+        if (path_has_extension(input_path, input_extensions[i])) {
+            filetype = i;
+        }
     }
-    else if (path_has_extension(input_path, ".hght")) {
-        filetype = HGHT;
-		LOG_MSG(info, "Converting HGHT file to DDS.\n");
-    } else if (argc == 4) {
+
+    if (filetype == INVALID && argc == 4) {
         u8 detail_lvl = 0;
         float x = 0.0f;
         float y = 0.0f;
         sscanf(argv[1], "%hhu", &detail_lvl);
         sscanf(argv[2], "%f", &x);
         sscanf(argv[3], "%f", &y);
-        const u32 idx = pos_to_zorder_idx(detail_lvl, x, y);
-
-        LOG_MSG(info, "X/Y coordinates: %f / %f\n", x, y);
-        LOG_MSG(info, "Detail level: %d\n", detail_lvl);
-        LOG_MSG(info, "Z-order curve index: %d\n", idx);
-        LOG_MSG(info, "HGHT filename: 5%d%08X.hght\n", detail_lvl, idx);
+        const s32 idx = pos_to_zorder_idx(detail_lvl, x, y);
+        if (idx > 0) {
+            LOG_MSG(info, "X/Y coordinates: %f / %f\n", x, y);
+            LOG_MSG(info, "Detail level: %d\n", detail_lvl);
+            LOG_MSG(info, "Z-order curve index: %d\n", idx);
+            LOG_MSG(info, "HGHT filename: 5%d%08X.hght\n", detail_lvl, idx);
+        }
         console_pause();
         return EXIT_SUCCESS;
     } else {
