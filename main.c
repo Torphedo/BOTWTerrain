@@ -4,9 +4,8 @@
 #include <malloc.h>
 #include <string.h>
 
-#include <sys/stat.h>
-
 #include <common/logging.h>
+#include <common/platform.h>
 #include <common/file.h>
 #include <common/image.h>
 #include <common/path.h>
@@ -51,6 +50,12 @@ u32 pos_to_zorder_idx(u8 detail_lvl, float x, float y) {
     return interleave16(i, j);
 }
 
+void console_pause() {
+#ifdef PLATFORM_WINDOWS
+    system("pause");
+#endif
+}
+
 typedef enum {
 	HGHT,
 	DDS,
@@ -84,6 +89,8 @@ void dds_to_hght(const char* dds_path, const char* hght_path) {
 
 	fwrite(&hght_data, hght_size, 1, hght);
 	fclose(hght);
+    LOG_MSG(info, "Saved HGHT to '%s'\n", hght_path);
+    console_pause();
 }
 
 void hght_to_dds(const char* hght_path, const char* dds_path) {
@@ -117,11 +124,15 @@ void hght_to_dds(const char* hght_path, const char* dds_path) {
         .data = (u8*)hght_data,
     };
     img_write(tex, dds_path);
+
+    LOG_MSG(info, "Saved DDS to '%s'\n", dds_path);
+    console_pause();
 }
 
 void usage() {
     LOG_MSG(info, "Usage: hght [path to HGHT/DDS file]\n");
     LOG_MSG(info, "   OR: hght [detail level] [decimal X coordinate] [decimal Y coordinate]\n");
+    console_pause();
 }
 
 int main(int argc, char** argv) {
@@ -155,6 +166,7 @@ int main(int argc, char** argv) {
         LOG_MSG(info, "Detail level: %d\n", detail_lvl);
         LOG_MSG(info, "Z-order curve index: %d\n", idx);
         LOG_MSG(info, "HGHT filename: 5%d%08X.hght\n", detail_lvl, idx);
+        console_pause();
         return EXIT_SUCCESS;
     } else {
         return EXIT_FAILURE;
