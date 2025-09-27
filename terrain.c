@@ -27,7 +27,7 @@ bool dds_to_hght(const char* dds_path, const char* hght_path) {
         LOG_MSG(error, "Failed to allocate %d bytes to load DDS file\n", dds_size);
         return false;
     }
-    texture tex = image_buf_load(dds_path, data, sizeof(dds_size));
+    texture tex = image_buf_load(dds_path, data, dds_size);
 
 	FILE* hght = fopen(hght_path, "wb");
 	if (!hght) {
