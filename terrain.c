@@ -6,11 +6,15 @@
 #include <common/file.h>
 #include <common/vfile.h>
 #include <common/image.h>
+#include <common/path.h>
 
 #include "dds.h"
 #include "util.h"
 
 bool dds_to_hght(const char* dds_path, const char* hght_path) {
+    assert(path_has_extension(hght_path, ".hght"));
+    assert(path_has_extension(dds_path, ".dds"));
+
 	const u32 minimum_size = sizeof(dds_header) + sizeof(hght_t);
     const u32 dds_size = file_size(dds_path);
 	if (dds_size < minimum_size) {
@@ -63,6 +67,9 @@ bool dds_to_hght(const char* dds_path, const char* hght_path) {
 }
 
 bool hght_to_dds(const char* hght_path, const char* dds_path) {
+    assert(path_has_extension(hght_path, ".hght"));
+    assert(path_has_extension(dds_path, ".dds"));
+
 	// Heightmaps are always 256x256 16-bit numbers
 	u16 hght_data[256*256] = {0};
 	const u32 hght_size = sizeof(hght_data);
