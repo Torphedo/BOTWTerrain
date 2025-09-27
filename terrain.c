@@ -107,6 +107,46 @@ bool hght_to_dds(const char* hght_path, const char* dds_path) {
     return true;
 }
 
+bool water_to_dds(const char* inpath, const char* outpath) {
+    assert(path_has_extension(inpath, ".water.extm"));
+    assert(path_has_extension(outpath, ".dds"));
+
+    const u32 insize = file_size(inpath);
+    if (insize != sizeof(water_extm)) {
+        LOG_MSG(error, ".water.extm files should be %d bytes, yours is %d", sizeof(water_extm), insize);
+        return false;
+    }
+
+    u16 heightmap_size = sizeof(u16) * WATER_EXTM_WIDTH * WATER_EXTM_WIDTH;
+    u16* heightmap = malloc(heightmap_size);
+    vfile vf_out = vfile_open(heightmap, heightmap_size);
+
+    FILE* f = fopen(inpath, "rb");
+    if (!f) {
+        return false;
+    }
+
+    for (u32 i = 0; i < WATER_EXTM_WIDTH; i++) {
+        for (u32 j = 0; j < WATER_EXTM_WIDTH; j++) {
+            water_vert vert = {};
+            fread(&vert, sizeof(vert), 1, f);
+            VFILE_WRITE(u16, &vf_out, vert.height);
+        }
+    }
+    fclose(f);
+
+    texture tex = {
+        .data = (u8*)heightmap,
+        .channels = 1,
+        .unit_size = 2,
+        .height = WATER_EXTM_WIDTH,
+        .width = WATER_EXTM_WIDTH,
+    };
+    img_write(tex, outpath);
+
+    return true;
+}
+
 s32 pos_to_zorder_idx(u8 detail_lvl, float x, float y) {
     if (detail_lvl > 8) {
         LOG_MSG(error, "The highest detail level is 8, but you asked for %d\n", detail_lvl);
