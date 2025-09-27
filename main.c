@@ -21,8 +21,15 @@ const char* input_extensions[] = {
 };
 
 void usage() {
-    LOG_MSG(info, "Usage: hght [path to HGHT/DDS file]\n");
+    LOG_MSG(info, "Usage: hght [path to HGHT/DDS/water.extm file]\n");
+    LOG_MSG(info, "       hght file.hght -> file.hght.dds\n");
+    LOG_MSG(info, "       hght file.hght.dds -> file.hght\n");
+    LOG_MSG(info, "       hght file.water.extm -> file.water.extm.dds\n");
+    LOG_MSG(info, "       hght file.water.extm.dds -> file.water.extm\n");
     LOG_MSG(info, "   OR: hght [detail level] [decimal X coordinate] [decimal Y coordinate]\n");
+    LOG_MSG(info, "If you're seeing this message but can't figure out how to make the console\n");
+    LOG_MSG(info, "stay open, you need to open a full console window. In File Explorer (in the\n");
+    LOG_MSG(info, "folder with your files), press Ctrl + L, then type 'cmd' and hit Enter.\n");
     console_pause();
 }
 
