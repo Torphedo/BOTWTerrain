@@ -1,12 +1,9 @@
-#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <malloc.h>
 #include <string.h>
 
 #include <common/logging.h>
-#include <common/platform.h>
-#include <common/file.h>
 #include <common/path.h>
 
 #include "util.h"
@@ -15,11 +12,12 @@
 typedef enum {
 	HGHT,
 	DDS,
+    WATER_EXTM,
 	INVALID,
-}input_type;
+}file_type;
 
 const char* input_extensions[] = {
-    ".hght", ".dds", "",
+    ".hght", ".dds", ".water.extm", "",
 };
 
 void usage() {
@@ -38,15 +36,25 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
 	}
 
-	input_type filetype = INVALID;
+	file_type in_type = INVALID;
+    file_type out_type = INVALID;
     for (u32 i = 0; i < ARRAY_SIZE(input_extensions); i++) {
         if (path_has_extension(input_path, input_extensions[i])) {
-            filetype = i;
+            in_type = i;
             break;
         }
     }
+    if (in_type == DDS) {
+        const char* old_ext = strchr(input_path, '.');
+        for (u32 i = 0; i < ARRAY_SIZE(input_extensions); i++) {
+            if (strncmp(old_ext, input_extensions[i], strlen(input_extensions[i])) == 0) {
+                out_type = i;
+                break;
+            }
+        }
+    }
 
-    if (filetype == INVALID && argc == 4) {
+    if (in_type == INVALID && argc == 4) {
         u8 detail_lvl = 0;
         float x = 0.0f;
         float y = 0.0f;
@@ -78,15 +86,42 @@ int main(int argc, char** argv) {
 			return EXIT_FAILURE;
 		}
 
-        const char* extension = (filetype == HGHT) ? "dds" : "hght";
-        snprintf(out_path, out_path_size, "%s.%s", input_path, extension);
+        if (in_type == DDS) {
+            // Cut off the extension to get the new path
+            strcpy(out_path, input_path);
+            char* dot = strchr(out_path, '.');
+            assert(dot != NULL && "Got DDS extension, then couldn't find a '.' ??");
+            const char* new_ext = input_extensions[out_type];
+            memcpy(dot, new_ext, strlen(new_ext) + 1);
+        } else {
+            snprintf(out_path, out_path_size, "%s.%s", input_path, ".dds");
+        }
 	}
 
-	if (filetype == HGHT) {
-		hght_to_dds(input_path, out_path);
-	} else {
-		dds_to_hght(input_path, out_path);
-	}
+    switch (in_type) {
+    case HGHT:
+        hght_to_dds(input_path, out_path);
+        break;
+    case WATER_EXTM:
+        LOG_MSG(error, ".water.extm -> .dds unimplemented!\n");
+        break;
+    case DDS:
+        switch (out_type) {
+        case HGHT:
+            dds_to_hght(input_path, out_path);
+            break;
+        case WATER_EXTM:
+            LOG_MSG(error, ".dds -> .water.extm unimplemented!\n");
+            break;
+        default:
+            LOG_MSG(error, "Unknown / invalid conversion from .dds -> %s\n", input_extensions[out_type]);
+            break;
+        }
+        break;
+    default:
+        LOG_MSG(error, "Unknown file type!\n");
+        break;
+    }
 
 	free(out_path);
     return EXIT_SUCCESS;
