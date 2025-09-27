@@ -44,5 +44,6 @@ typedef struct {
 }water_extm;
 
 bool water_to_dds(const char* inpath, const char* outpath);
+bool dds_to_water(const char* inpath, const char* outpath);
 
 static_assert(sizeof(water_extm) == 8 * 64 * 64, "water.extm size is wrong!");

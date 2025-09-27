@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
         hght_to_dds(input_path, out_path);
         break;
     case WATER_EXTM:
-        LOG_MSG(error, ".water.extm -> .dds unimplemented!\n");
+        water_to_dds(input_path, out_path);
         break;
     case DDS:
         switch (out_type) {
@@ -118,10 +118,10 @@ int main(int argc, char** argv) {
             dds_to_hght(input_path, out_path);
             break;
         case WATER_EXTM:
-            LOG_MSG(error, ".dds -> .water.extm unimplemented!\n");
+            dds_to_water(input_path, out_path);
             break;
         default:
-            LOG_MSG(error, "Unknown / invalid conversion from .dds -> %s\n", input_extensions[out_type]);
+            LOG_MSG(error, "Unknown / invalid conversion from .dds -> '%s'\n", input_extensions[out_type]);
             break;
         }
         break;

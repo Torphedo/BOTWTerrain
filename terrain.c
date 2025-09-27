@@ -147,6 +147,58 @@ bool water_to_dds(const char* inpath, const char* outpath) {
     return true;
 }
 
+bool dds_to_water(const char* inpath, const char* outpath) {
+    assert(path_has_extension(inpath, ".dds"));
+    assert(path_has_extension(outpath, ".water.extm"));
+    assert(file_exists(outpath) && "For .dds -> .water.extm, the water file must already exist.");
+    const u32 insize = file_size(inpath);
+    const u32 outsize = file_size(outpath);
+    if (outsize != sizeof(water_extm)) {
+        LOG_MSG(error, "Your output water file is the wrong size (%d bytes, should be %d bytes)\n", outsize, sizeof(water_extm));
+        return false;
+    }
+
+    FILE* outfile = fopen(outpath, "r+"); // This is a read/write handle
+    if (!outfile) {
+        LOG_MSG(error, "Failed to open '%s'\n", outfile);
+        return false;
+    }
+
+    u8* data = malloc(insize);
+    if (!data) {
+        LOG_MSG(error, "Failed to allocate %d bytes to load DDS file\n", insize);
+        fclose(outfile);
+        return false;
+    }
+    texture tex = image_buf_load(inpath, data, insize);
+    vfile vf_out = vfile_open(data, insize);
+
+    for (u32 i = 0; i < WATER_EXTM_WIDTH; i++) {
+        for (u32 j = 0; j < WATER_EXTM_WIDTH; j++) {
+            water_vert vert = {};
+            fread(&vert, sizeof(vert), 1, outfile);
+
+            // Get height value from texture
+            if (tex.channels == 1 && tex.unit_size == 2) {
+                // Format matches the file, just copy
+                vert.height = VFILE_READ(u16, &vf_out);
+            }
+            else if (tex.compressed && tex.fmt == DDS_FORMAT_FLOAT) {
+                vert.height = (u16)(VFILE_READ(float, &vf_out) * UINT16_MAX);
+            } else {
+                LOG_MSG(error, "Can't convert DDS - must be R16 or floating-point R32\n");
+            }
+
+            // Write back the modified vertex
+            fseek(outfile, -1 * (s64)sizeof(vert), SEEK_CUR);
+            fwrite(&vert, sizeof(vert), 1, outfile);
+        }
+    }
+
+    fclose(outfile);
+    free(data);
+}
+
 s32 pos_to_zorder_idx(u8 detail_lvl, float x, float y) {
     if (detail_lvl > 8) {
         LOG_MSG(error, "The highest detail level is 8, but you asked for %d\n", detail_lvl);
