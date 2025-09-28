@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
             const char* new_ext = input_extensions[out_type];
             memcpy(dot, new_ext, strlen(new_ext) + 1);
         } else {
-            snprintf(out_path, out_path_size, "%s.%s", input_path, ".dds");
+            snprintf(out_path, out_path_size, "%s.%s", input_path, "dds");
         }
 	}
 
