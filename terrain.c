@@ -143,6 +143,7 @@ bool water_to_dds(const char* inpath, const char* outpath) {
         .width = WATER_EXTM_WIDTH,
     };
     img_write(tex, outpath);
+    LOG_MSG(info, "Saved DDS to '%s'\n", outpath);
 
     return true;
 }
@@ -195,8 +196,10 @@ bool dds_to_water(const char* inpath, const char* outpath) {
         }
     }
 
+    LOG_MSG(info, "Overwrote '%s'\n", outpath);
     fclose(outfile);
     free(data);
+    return true;
 }
 
 s32 pos_to_zorder_idx(u8 detail_lvl, float x, float y) {
