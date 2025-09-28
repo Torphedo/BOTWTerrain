@@ -210,11 +210,14 @@ s32 pos_to_zorder_idx(u8 detail_lvl, float x, float y) {
         LOG_MSG(error, "The highest detail level is 8, but you asked for %d\n", detail_lvl);
         return -1;
     }
+    // Make the top left corner (-6000, -6000) become (0, 0).
+    x += MAP_SIZE;
+    y += MAP_SIZE;
 
     // How many HGHT files wide the map is
     const u16 grid_res = 1 << detail_lvl;
     // How wide each grid cell is in world coordinates
-    const float grid_size = MAP_SIZE / ((float)grid_res);
+    const float grid_size = (2 * MAP_SIZE) / ((float)grid_res);
 
     LOG_MSG(debug, "HGHT size in world: %f\n", grid_size);
 
@@ -224,6 +227,9 @@ s32 pos_to_zorder_idx(u8 detail_lvl, float x, float y) {
 
     // Interleave bits to get Z-order curve index. Look at the Wikipedia page
     // about it if you want to know why this works
-    return interleave16(i, j);
+    const s32 result = interleave16(i, j);
+    assert(result <= grid_res * grid_res && "Programmer error: Z order curve index out of bounds");
+
+    return result;
 }
 

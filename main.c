@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
         sscanf(argv[2], "%f", &x);
         sscanf(argv[3], "%f", &y);
         const s32 idx = pos_to_zorder_idx(detail_lvl, x, y);
-        if (idx > 0) {
+        if (idx >= 0) {
             LOG_MSG(info, "X/Y coordinates: %f / %f\n", x, y);
             LOG_MSG(info, "Detail level: %d\n", detail_lvl);
             LOG_MSG(info, "Z-order curve index: %d\n", idx);
