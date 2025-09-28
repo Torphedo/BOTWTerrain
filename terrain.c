@@ -128,7 +128,7 @@ bool water_to_dds(const char* inpath, const char* outpath) {
 
     for (u32 i = 0; i < WATER_EXTM_WIDTH; i++) {
         for (u32 j = 0; j < WATER_EXTM_WIDTH; j++) {
-            water_vert vert = {};
+            water_vert vert = {0};
             fread(&vert, sizeof(vert), 1, f);
             VFILE_WRITE(u16, &vf_out, vert.height);
         }
@@ -178,7 +178,7 @@ bool dds_to_water(const char* inpath, const char* outpath) {
 
     for (u32 i = 0; i < WATER_EXTM_WIDTH; i++) {
         for (u32 j = 0; j < WATER_EXTM_WIDTH; j++) {
-            water_vert vert = {};
+            water_vert vert = {0};
             fread(&vert, sizeof(vert), 1, outfile);
 
             // Get height value from texture
