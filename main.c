@@ -33,6 +33,13 @@ void usage() {
     console_pause();
 }
 
+#define SOURCE_URL "https://github.com/Torphedo/BOTWTerrain"
+
+void print_version() {
+    printf("BOTW Terrain Converter Utility, v0.0.3\n");
+    printf("Written by Torphedo, open-source @ " SOURCE_URL "\n");
+}
+
 int main(int argc, char** argv) {
 	enable_win_ansi(); // Enable printing in color on Windows.
 	const char* input_path = argv[1];
@@ -41,7 +48,10 @@ int main(int argc, char** argv) {
 		LOG_MSG(error, "Not enough arguments.\n");
         usage();
         return EXIT_FAILURE;
-	}
+	} else if (argc == 2 && strcmp(argv[1], "--version") == 0) {
+        print_version();
+        return EXIT_SUCCESS;
+    }
 
 	file_type in_type = INVALID;
     file_type out_type = INVALID;
