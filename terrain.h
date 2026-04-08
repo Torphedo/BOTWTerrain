@@ -25,7 +25,7 @@ enum {
 typedef struct {
     u16 height[HGHT_WIDTH][HGHT_WIDTH];
 }hght_t;
-static_assert(sizeof(hght_t) == 2 * 256 * 256, "HGHT struct size is wrong!");
+static_assert(sizeof(hght_t) == 2 * HGHT_WIDTH * HGHT_WIDTH, "HGHT struct size is wrong!");
 
 // https://zeldamods.org/wiki/Water.extm
 typedef struct {
@@ -58,6 +58,9 @@ static_assert(sizeof(mate_t) == 256 * 256 * 4, "Material map size is wrong!");
 
 bool hght_to_dds(const char* inpath, const char* outpath);
 bool dds_to_hght(const char* inpath, const char* outpath);
+
+bool mate_to_dds(const char* mate_path, const char* dds_path);
+bool dds_to_mate(const char* dds_path, const char* mate_path);
 
 bool water_to_dds(const char* inpath, const char* outpath);
 bool dds_to_water(const char* inpath, const char* outpath);

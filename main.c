@@ -13,17 +13,20 @@ typedef enum {
 	HGHT,
 	DDS,
     WATER_EXTM,
+    MATE,
 	INVALID,
 }file_type;
 
 const char* input_extensions[] = {
-    ".hght", ".dds", ".water.extm", "",
+    ".hght", ".dds", ".water.extm", ".mate", "",
 };
 
 void usage() {
     LOG_MSG(info, "Usage: hght [path to HGHT/DDS/water.extm file]\n");
     LOG_MSG(info, "       hght file.hght -> file.hght.dds\n");
     LOG_MSG(info, "       hght file.hght.dds -> file.hght\n");
+    LOG_MSG(info, "       hght file.mate -> file.mate.dds\n");
+    LOG_MSG(info, "       hght file.mate.dds -> file.mate\n");
     LOG_MSG(info, "       hght file.water.extm -> file.water.extm.dds\n");
     LOG_MSG(info, "       hght file.water.extm.dds -> file.water.extm\n");
     LOG_MSG(info, "   OR: hght [detail level] [decimal X coordinate] [decimal Y coordinate]\n");
@@ -119,6 +122,9 @@ int main(int argc, char** argv) {
     case HGHT:
         hght_to_dds(input_path, out_path);
         break;
+    case MATE:
+        mate_to_dds(input_path, out_path);
+        break;
     case WATER_EXTM:
         water_to_dds(input_path, out_path);
         break;
@@ -126,6 +132,9 @@ int main(int argc, char** argv) {
         switch (out_type) {
         case HGHT:
             dds_to_hght(input_path, out_path);
+            break;
+        case MATE:
+            dds_to_mate(input_path, out_path);
             break;
         case WATER_EXTM:
             dds_to_water(input_path, out_path);

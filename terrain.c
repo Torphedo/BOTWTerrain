@@ -71,7 +71,7 @@ bool hght_to_dds(const char* hght_path, const char* dds_path) {
     assert(path_has_extension(dds_path, ".dds"));
 
 	// Heightmaps are always 256x256 16-bit numbers
-	u16 hght_data[256*256] = {0};
+	u16 hght_data[HGHT_WIDTH*HGHT_WIDTH] = {0};
 	const u32 hght_size = sizeof(hght_data);
 
 	// Sanity check that our file is the right size before we do anything
@@ -95,8 +95,8 @@ bool hght_to_dds(const char* hght_path, const char* dds_path) {
     texture tex = {
         .channels = 1,
         .unit_size = 2,
-        .height = 256,
-        .width = 256,
+        .height = HGHT_WIDTH,
+        .width = HGHT_WIDTH,
         .data = (u8*)hght_data,
     };
     img_write(tex, dds_path);
@@ -204,6 +204,82 @@ bool dds_to_water(const char* inpath, const char* outpath) {
     console_pause();
     return true;
 }
+
+bool dds_to_mate(const char* dds_path, const char* mate_path) {
+    assert(path_has_extension(mate_path, ".mate"));
+    assert(path_has_extension(dds_path, ".dds"));
+
+	const u32 minimum_size = sizeof(dds_header) + sizeof(mate_t);
+    const u32 dds_size = file_size(dds_path);
+	if (dds_size < minimum_size) {
+		LOG_MSG(error, "Invalid DDS file (too small, should be at least %d bytes)\n", minimum_size);
+		return false;
+	}
+
+    u8* data = malloc(dds_size);
+    if (!data) {
+        LOG_MSG(error, "Failed to allocate %d bytes to load DDS file\n", dds_size);
+        return false;
+    }
+    texture tex = image_buf_load(dds_path, data, dds_size);
+
+	FILE* f = fopen(mate_path, "wb");
+	if (!f) {
+        LOG_MSG(error, "Failed to open MATE file '%s'\n", mate_path);
+		return false;
+	}
+
+    assert(tex.channels == 4 && tex.unit_size == 1);
+    // Format matches MATE file, just copy the data
+    fwrite(data, sizeof(mate_t), 1, f);
+    LOG_MSG(info, "Saved MATE to '%s'\n", mate_path);
+
+    free(data);
+	fclose(f);
+    console_pause();
+    return true;
+}
+
+bool mate_to_dds(const char* mate_path, const char* dds_path) {
+    assert(path_has_extension(mate_path, ".mate"));
+    assert(path_has_extension(dds_path, ".dds"));
+
+	mate_t mate_data = {0};
+	const u32 mate_size = sizeof(mate_data);
+
+	// Sanity check that our file is the right size before we do anything
+	if (file_size(mate_path) != mate_size) {
+		LOG_MSG(error, "Invalid MATE file (wrong size)\n");
+		return false;
+	}
+
+	FILE* f = fopen(mate_path, "rb");
+	if (!f) {
+		fclose(f);
+		return false;
+	}
+
+	// Read heightmap into memory
+	fread(&mate_data, mate_size, 1, f);
+	fclose(f);
+
+	// Write the image header to our output, then the heightmap data
+	// (which will be interpreted as pixels).
+    texture tex = {
+        .channels = 4,
+        .unit_size = 1,
+        .height = HGHT_WIDTH,
+        .width = HGHT_WIDTH,
+        .data = (u8*)&mate_data,
+    };
+    img_write(tex, dds_path);
+
+    LOG_MSG(info, "Saved DDS to '%s'\n", dds_path);
+    console_pause();
+
+    return true;
+}
+
 
 s32 pos_to_zorder_idx(u8 detail_lvl, float x, float y) {
     if (detail_lvl > 8) {
