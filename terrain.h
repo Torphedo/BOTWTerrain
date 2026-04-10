@@ -19,6 +19,19 @@ enum {
     WATER_NO_FLOW = 128,
 };
 
+typedef enum {
+	HGHT,
+	DDS,
+    WATER_EXTM,
+    MATE,
+	INVALID,
+}terrain_file_type;
+
+static const char* input_extensions[] = {
+    ".hght", ".dds", ".water.extm", ".mate", "",
+};
+
+
 // Used to convert world coords to Z order curve index for HGHT
 #define MAP_SIZE (6000.0f)
 

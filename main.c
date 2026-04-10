@@ -9,18 +9,6 @@
 #include "util.h"
 #include "terrain.h"
 
-typedef enum {
-	HGHT,
-	DDS,
-    WATER_EXTM,
-    MATE,
-	INVALID,
-}file_type;
-
-const char* input_extensions[] = {
-    ".hght", ".dds", ".water.extm", ".mate", "",
-};
-
 void usage() {
     LOG_MSG(info, "Usage: hght [path to HGHT/DDS/water.extm file]\n");
     LOG_MSG(info, "       hght file.hght -> file.hght.dds\n");
@@ -56,8 +44,8 @@ int main(int argc, char** argv) {
         return EXIT_SUCCESS;
     }
 
-	file_type in_type = INVALID;
-    file_type out_type = INVALID;
+	terrain_file_type in_type = INVALID;
+    terrain_file_type out_type = INVALID;
     for (u32 i = 0; i < ARRAY_SIZE(input_extensions); i++) {
         if (path_has_extension(input_path, input_extensions[i])) {
             in_type = i;
