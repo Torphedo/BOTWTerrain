@@ -212,7 +212,7 @@ bool dds_to_mate(const char* dds_path, const char* mate_path) {
 	const u32 minimum_size = sizeof(dds_header) + sizeof(mate_t);
     const u32 dds_size = file_size(dds_path);
 	if (dds_size < minimum_size) {
-		LOG_MSG(error, "Invalid DDS file (too small, should be at least %d bytes)\n", minimum_size);
+		LOG_MSG(error, "Invalid DDS file (should be at least %d bytes, but it's only %d bytes)\n", minimum_size, dds_size);
 		return false;
 	}
 
@@ -229,6 +229,16 @@ bool dds_to_mate(const char* dds_path, const char* mate_path) {
 		return false;
 	}
 
+    if (tex.channels != 4 || tex.unit_size != 1 || tex.compressed) {
+        LOG_MSG(error, "Unable to convert '%s'. The image must be uncompressed, with four 8-bit channels.\n", dds_path);
+        if (tex.compressed) {
+            LOG_MSG(info, "The texture you gave was compressed (internal format ID %d, please pass this information along to the developer).\n", tex.fmt);
+        } else {
+            LOG_MSG(info, "The texture you gave had %d channels that were %d bits each.\n", tex.channels, tex.unit_size * 8);
+        }
+
+        goto fail;
+    }
     assert(tex.channels == 4 && tex.unit_size == 1);
     // Format matches MATE file, just copy the data
     fwrite(data, sizeof(mate_t), 1, f);
@@ -238,6 +248,11 @@ bool dds_to_mate(const char* dds_path, const char* mate_path) {
 	fclose(f);
     console_pause();
     return true;
+
+fail:
+    free(data);
+    fclose(f);
+    return false;
 }
 
 bool mate_to_dds(const char* mate_path, const char* dds_path) {
@@ -280,6 +295,29 @@ bool mate_to_dds(const char* mate_path, const char* dds_path) {
     return true;
 }
 
+blit_source terrain_to_blit_source(terrain_file_type type, const void* data) {
+    blit_source source = {
+        .data = data,
+    };
+    u32 dim = 0;
+    switch (type) {
+        case HGHT:
+            dim = HGHT_WIDTH;
+            break;
+        case MATE:
+            dim = MATE_WIDTH;
+            break;
+        case WATER_EXTM:
+            dim = WATER_EXTM_WIDTH;
+            break;
+        default:
+            LOG_MSG(error, "Programmer error: Invalid terrain filetype ID %d!\n");
+            break;
+    }
+
+    source.height = source.width = dim;
+    return source;
+}
 
 s32 pos_to_zorder_idx(u8 detail_lvl, float x, float y) {
     if (detail_lvl > 8) {
